@@ -1,9 +1,10 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 
 namespace ShakePay.Contracts
 {
-    public class TransactionHistoryResponse
+    public class Transaction
     {
         [JsonProperty("transactionId")]
         public string TransactionId { get; set; }
@@ -18,7 +19,7 @@ namespace ShakePay.Contracts
         [JsonProperty("currency")]
         public string Currency { get; set; }
         [JsonProperty("amount")]
-        public int Amount { get; set; }
+        public decimal Amount { get; set; }
         [JsonProperty("type")]
         public string Type { get; set; }
         [JsonProperty("to")]

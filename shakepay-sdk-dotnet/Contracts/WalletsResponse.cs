@@ -16,8 +16,8 @@ namespace ShakePay.Contracts
         [JsonProperty("id")]
         public string Id { get; set; }
         [JsonProperty("balance")]
-        public int Balance { get; set; }
+        public decimal Balance { get; set; }
         [JsonProperty("fiatBalance")]
-        public int FiatBalance { get; set; }
+        public decimal FiatBalance { get; set; }
     }
 }

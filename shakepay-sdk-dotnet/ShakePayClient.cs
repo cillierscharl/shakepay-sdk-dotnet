@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using ShakePay.Contracts;
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -34,7 +35,7 @@ namespace ShakePay
             return null;
         }
 
-        public async Task<TransactionHistoryResponse> GetTransactionsHistoryAsync(int limit = 10)
+        public async Task<List<Transaction>> GetTransactionsHistoryAsync(int limit = 10)
         {
             if (!_initialized)
             {
@@ -46,7 +47,7 @@ namespace ShakePay
             var transactionsHistoryResponse = await _httpClient.GetAsync($"{_baseUrl}/transactions/history?currency=CAD&before={beforeDateTime}&limit={limit}");
             if (transactionsHistoryResponse.IsSuccessStatusCode)
             {
-                return JsonConvert.DeserializeObject<TransactionHistoryResponse>(await transactionsHistoryResponse.Content.ReadAsStringAsync());
+                return JsonConvert.DeserializeObject<List<Transaction>>(await transactionsHistoryResponse.Content.ReadAsStringAsync());
             }
 
             return null;
