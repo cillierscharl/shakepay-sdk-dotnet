@@ -3,6 +3,7 @@ using ShakePay.Contracts;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace ShakePay
@@ -51,6 +52,24 @@ namespace ShakePay
             }
 
             return null;
+        }
+
+        public async Task<bool> PostTransactionAsync(string walletId, string username, decimal amount)
+        {
+            var requestBody = new TransactionRequest()
+            {
+                Amount = amount.ToString(),
+                FromWallet = walletId,
+                Note = "🏓",
+                To = username,
+                ToType = "user"
+            };
+
+
+
+            var request = await _httpClient.PostAsync($"{_baseUrl}/transactions", new StringContent(JsonConvert.SerializeObject(requestBody), Encoding.UTF8, "application/json"));
+
+            return request.IsSuccessStatusCode;
         }
     }
 
