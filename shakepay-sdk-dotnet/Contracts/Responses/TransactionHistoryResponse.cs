@@ -1,8 +1,15 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 
 namespace ShakePay.Contracts
 {
+    public class TransactionHistoryResponse
+    {
+        [JsonProperty("data")]
+        public List<Transaction> Data { get; set; }
+    }
+
     public class Transaction
     {
         [JsonProperty("transactionId")]

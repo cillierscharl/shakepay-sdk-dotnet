@@ -36,31 +36,46 @@ namespace ShakePay
             return null;
         }
 
-        public async Task<List<Transaction>> GetTransactionsHistoryAsync(int limit = 10)
+        public async Task<TransactionHistoryResponse> GetTransactionsHistoryAsync(int page = 0, int limit = 10)
         {
             if (!_initialized)
             {
                 throw new Exception("ShakePay client not initialized");
             }
 
-            var beforeDateTime = DateTime.UtcNow.ToString("O");
+            var requestBody = new TransactionHistoryRequest()
+            {
+                Pagination = new TransactionHistoryPagination()
+                {
+                    Descending = true,
+                    Page = page,
+                    RowsPerPage = limit
+                },
+                FilterParams = new object()
+            };
 
-            var transactionsHistoryResponse = await _httpClient.GetAsync($"{_baseUrl}/transactions/history?currency=CAD&before={beforeDateTime}&limit={limit}");
+            var transactionsHistoryResponse = await _httpClient.PostAsync(
+                $"{_baseUrl}/transactions/history",
+                new StringContent(JsonConvert.SerializeObject(requestBody),
+                Encoding.UTF8,
+                "application/json"));
+
             if (transactionsHistoryResponse.IsSuccessStatusCode)
             {
-                return JsonConvert.DeserializeObject<List<Transaction>>(await transactionsHistoryResponse.Content.ReadAsStringAsync());
+                var response = await transactionsHistoryResponse.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<TransactionHistoryResponse>(response);
             }
 
             return null;
         }
 
-        public async Task<bool> PostTransactionAsync(string walletId, string username, decimal amount)
+        public async Task<bool> PostTransactionAsync(string walletId, string username, decimal amount, string note)
         {
             var requestBody = new TransactionRequest()
             {
                 Amount = amount.ToString(),
                 FromWallet = walletId,
-                Note = "🏓",
+                Note = note,
                 To = username,
                 ToType = "user"
             };
