@@ -1,9 +1,9 @@
 ﻿using Newtonsoft.Json;
 using ShakePay.Contracts;
 using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace ShakePay
@@ -13,11 +13,14 @@ namespace ShakePay
         private readonly bool _initialized;
         private readonly HttpClient _httpClient;
         private static readonly string _baseUrl = "https://api.shakepay.com";
+        private string _jwt;
         public ShakePayClient(string jwt, HttpClient httpClient)
         {
             _httpClient = httpClient;
             _httpClient.DefaultRequestHeaders.Add("Authorization", jwt);
             _initialized = true;
+            _jwt = jwt;
+            PeriodicallyRefreshToken();
         }
 
         public async Task<WalletsResponse> GetWalletsAsync()
@@ -36,7 +39,7 @@ namespace ShakePay
             return null;
         }
 
-        public async Task<TransactionHistoryResponse> GetTransactionsHistoryAsync(int page = 0, int limit = 10)
+        public async Task<TransactionHistoryResponse> GetTransactionsHistoryAsync(int page = 0, int limit = 20)
         {
             if (!_initialized)
             {
@@ -80,12 +83,46 @@ namespace ShakePay
                 ToType = "user"
             };
 
+            var postTransactionResponse = await _httpClient.PostAsync(
+                $"{_baseUrl}/transactions",
+                new StringContent(JsonConvert.SerializeObject(requestBody),
+                Encoding.UTF8,
+                "application/json"));
 
+            return postTransactionResponse.IsSuccessStatusCode;
+        }
 
-            var request = await _httpClient.PostAsync($"{_baseUrl}/transactions", new StringContent(JsonConvert.SerializeObject(requestBody), Encoding.UTF8, "application/json"));
+        private void PeriodicallyRefreshToken()
+        {
+            var t = new Task(async () =>
+            {
+                while (true)
+                {
+                    await Task.Delay((int)TimeSpan.FromMinutes(1).TotalMilliseconds);
+                    await RenewTokenAsync();
+                }
+            });
 
-            return request.IsSuccessStatusCode;
+            t.Start();
+        }
+
+        private async Task RenewTokenAsync()
+        {
+            var newTokenHttpResponse = await _httpClient.PostAsync($"{_baseUrl}/authentication", new StringContent(JsonConvert.SerializeObject(new RenewAuthenticationTokenRequest()
+            {
+                Strategy = "jwt",
+                AccessToken = _jwt
+            })));
+
+            if (newTokenHttpResponse.IsSuccessStatusCode)
+            {
+                var newTokenString = await newTokenHttpResponse.Content.ReadAsStringAsync();
+                var newTokenResponse = JsonConvert.DeserializeObject<RenewAuthenticationTokenResponse>(newTokenString);
+
+                _jwt = newTokenResponse.AccessToken;
+                _httpClient.DefaultRequestHeaders.Clear();
+                _httpClient.DefaultRequestHeaders.Add("Authorization", _jwt);
+            }
         }
     }
-
 }
