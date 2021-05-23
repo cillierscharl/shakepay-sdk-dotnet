@@ -6,10 +6,10 @@ namespace ShakePay.Contracts
     public class WalletsResponse
     {
         [JsonProperty("data")]
-        public IList<Data> Datas { get; set; }
+        public List<Wallet> Wallets { get; set; }
     }
 
-    public class Data
+    public class Wallet
     {
         [JsonProperty("currency")]
         public string Currency { get; set; }

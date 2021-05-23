@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace ShakePay
 {
-    public class ShakePayClient
+    public class ShakePayClient : IShakePayClient
     {
         private readonly bool _initialized;
         private readonly HttpClient _httpClient;
@@ -23,23 +23,24 @@ namespace ShakePay
             PeriodicallyRefreshToken();
         }
 
-        public async Task<WalletsResponse> GetWalletsAsync()
+        public async Task<List<Wallet>> GetWalletsAsync()
         {
             if (!_initialized)
             {
                 throw new Exception("ShakePay client not initialized");
             }
 
-            var walletsResponse = await _httpClient.GetAsync($"{_baseUrl}/wallets");
-            if (walletsResponse.IsSuccessStatusCode)
+            var walletsHttpResponse = await _httpClient.GetAsync($"{_baseUrl}/wallets");
+            if (walletsHttpResponse.IsSuccessStatusCode)
             {
-                return JsonConvert.DeserializeObject<WalletsResponse>(await walletsResponse.Content.ReadAsStringAsync());
+                var walletsResponse = JsonConvert.DeserializeObject<WalletsResponse>(await walletsHttpResponse.Content.ReadAsStringAsync());
+                return walletsResponse.Wallets;
             }
 
             return null;
         }
 
-        public async Task<PagedTransactionHistoryResponse> GetTransactionsHistoryPagedAsync(int page = 0, int limit = 20)
+        public async Task<List<Transaction>> GetTransactionsHistoryPagedAsync(int page = 0, int limit = 20)
         {
             if (!_initialized)
             {
@@ -57,16 +58,17 @@ namespace ShakePay
                 FilterParams = new object()
             };
 
-            var transactionsHistoryResponse = await _httpClient.PostAsync(
+            var transactionsHistoryHttpResponse = await _httpClient.PostAsync(
                 $"{_baseUrl}/transactions/history",
                 new StringContent(JsonConvert.SerializeObject(requestBody),
                 Encoding.UTF8,
                 "application/json"));
 
-            if (transactionsHistoryResponse.IsSuccessStatusCode)
+            if (transactionsHistoryHttpResponse.IsSuccessStatusCode)
             {
-                var response = await transactionsHistoryResponse.Content.ReadAsStringAsync();
-                return JsonConvert.DeserializeObject<PagedTransactionHistoryResponse>(response);
+                var trasnactionHistoryResponseString = await transactionsHistoryHttpResponse.Content.ReadAsStringAsync();
+                var transactionHistoryResponse = JsonConvert.DeserializeObject<PagedTransactionHistoryResponse>(trasnactionHistoryResponseString);
+                return transactionHistoryResponse.Transactions;
             }
 
             return null;

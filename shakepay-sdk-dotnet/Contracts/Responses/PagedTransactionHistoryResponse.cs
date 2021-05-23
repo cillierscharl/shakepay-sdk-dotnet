@@ -7,7 +7,7 @@ namespace ShakePay.Contracts
     public class PagedTransactionHistoryResponse
     {
         [JsonProperty("data")]
-        public List<Transaction> Data { get; set; }
+        public List<Transaction> Transactions { get; set; }
     }
 
     public class Transaction
