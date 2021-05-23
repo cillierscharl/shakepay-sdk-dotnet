@@ -1,16 +1,23 @@
 # shakepay-sdk-dotnet
 
 [![.NET](https://github.com/cillierscharl/shakepay-sdk-dotnet/actions/workflows/dotnet.yml/badge.svg)](https://github.com/cillierscharl/shakepay-sdk-dotnet/actions/workflows/dotnet.yml)
+[![NuGet](https://img.shields.io/nuget/v/shakepay-sdk-dotnet?style=plastic)](https://www.nuget.org/packages/shakepay-sdk-dotnet/)
 
 Unofficial ShakePay .NET SDK
+
+#### Installation ####
+
+```shell
+Install-Package shakepay-sdk-dotnet -Version 1.0.0
+```
 
 
 #### QuickStart ####
 
 ```csharp
-// JWT will automatically be refreshed every minute
+// JWT will automatically be refreshed every 5 minutes
 var jwt = "";
-// Use an HTTP client factory. For demo purposes pass in a new client.
+// Use an HTTP client factory. For demo purposes pass in a new client
 var httpClient = new HttpClient();
 var client = new ShakePayClient(jwt, httpClient);
 

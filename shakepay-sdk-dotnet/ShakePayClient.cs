@@ -119,7 +119,7 @@ namespace ShakePay
             {
                 while (true)
                 {
-                    await Task.Delay((int)TimeSpan.FromMinutes(1).TotalMilliseconds);
+                    await Task.Delay((int)TimeSpan.FromMinutes(5).TotalMilliseconds);
                     await RenewTokenAsync();
                 }
             });
