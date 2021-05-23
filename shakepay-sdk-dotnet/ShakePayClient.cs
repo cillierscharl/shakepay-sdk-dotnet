@@ -1,9 +1,9 @@
 ﻿using Newtonsoft.Json;
 using ShakePay.Contracts;
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace ShakePay
@@ -39,7 +39,7 @@ namespace ShakePay
             return null;
         }
 
-        public async Task<TransactionHistoryResponse> GetTransactionsHistoryAsync(int page = 0, int limit = 20)
+        public async Task<PagedTransactionHistoryResponse> GetTransactionsHistoryPagedAsync(int page = 0, int limit = 20)
         {
             if (!_initialized)
             {
@@ -51,7 +51,7 @@ namespace ShakePay
                 Pagination = new TransactionHistoryPagination()
                 {
                     Descending = true,
-                    Page = page,
+                    Page = page.ToString(),
                     RowsPerPage = limit
                 },
                 FilterParams = new object()
@@ -66,7 +66,26 @@ namespace ShakePay
             if (transactionsHistoryResponse.IsSuccessStatusCode)
             {
                 var response = await transactionsHistoryResponse.Content.ReadAsStringAsync();
-                return JsonConvert.DeserializeObject<TransactionHistoryResponse>(response);
+                return JsonConvert.DeserializeObject<PagedTransactionHistoryResponse>(response);
+            }
+
+            return null;
+        }
+
+        public async Task<List<Transaction>> GetTransactionHistory(string currency = "CAD", int limit = 10)
+        {
+            if (!_initialized)
+            {
+                throw new Exception("ShakePay client not initialized");
+            }
+
+            var beforeDateTime = DateTime.UtcNow.ToString("O");
+            var transactionsHistoryResponse = await _httpClient.GetAsync($"{_baseUrl}/transactions/history?currency={currency}&before={beforeDateTime}&limit={limit}");
+
+            if (transactionsHistoryResponse.IsSuccessStatusCode)
+            {
+                var response = await transactionsHistoryResponse.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<List<Transaction>>(response);
             }
 
             return null;

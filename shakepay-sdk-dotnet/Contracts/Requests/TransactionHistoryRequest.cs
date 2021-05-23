@@ -1,7 +1,4 @@
 ﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace ShakePay.Contracts
 {
@@ -20,6 +17,6 @@ namespace ShakePay.Contracts
         [JsonProperty("rowsPerPage")]
         public int RowsPerPage { get; set; }
         [JsonProperty("page")]
-        public int Page { get; set; }
+        public string Page { get; set; }
     }
 }

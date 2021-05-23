@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace ShakePay.Contracts
 {
-    public class TransactionHistoryResponse
+    public class PagedTransactionHistoryResponse
     {
         [JsonProperty("data")]
         public List<Transaction> Data { get; set; }
