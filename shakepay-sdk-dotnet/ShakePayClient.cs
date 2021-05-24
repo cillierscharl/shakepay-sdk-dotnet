@@ -2,6 +2,7 @@
 using ShakePay.Contracts;
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,6 +19,7 @@ namespace ShakePay
         {
             _httpClient = httpClient;
             _httpClient.DefaultRequestHeaders.Add("Authorization", jwt);
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", "shakepay-sdk-dotnet/1.0.0");
             _initialized = true;
             _jwt = jwt;
             PeriodicallyRefreshToken();
@@ -143,6 +145,7 @@ namespace ShakePay
                 _jwt = newTokenResponse.AccessToken;
                 _httpClient.DefaultRequestHeaders.Clear();
                 _httpClient.DefaultRequestHeaders.Add("Authorization", _jwt);
+                _httpClient.DefaultRequestHeaders.Add("User-Agent", "shakepay-sdk-dotnet/1.0.0");
             }
         }
     }
