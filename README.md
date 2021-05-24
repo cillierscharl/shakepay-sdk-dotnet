@@ -1,7 +1,7 @@
 # shakepay-sdk-dotnet
 
 [![.NET](https://github.com/cillierscharl/shakepay-sdk-dotnet/actions/workflows/dotnet.yml/badge.svg)](https://github.com/cillierscharl/shakepay-sdk-dotnet/actions/workflows/dotnet.yml)
-[![NuGet](https://img.shields.io/nuget/v/shakepay-sdk-dotnet?style=plastic)](https://www.nuget.org/packages/shakepay-sdk-dotnet/)
+[![NuGet](https://img.shields.io/nuget/v/shakepay-sdk-dotnet)](https://www.nuget.org/packages/shakepay-sdk-dotnet/)
 
 Unofficial ShakePay .NET SDK
 
