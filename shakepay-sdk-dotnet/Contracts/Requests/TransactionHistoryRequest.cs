@@ -13,7 +13,7 @@ namespace ShakePay.Contracts
 
     public class TransactionHistoryFilterParams
     {
-        [JsonProperty("currencies")]
+        [JsonProperty("currencies", NullValueHandling = NullValueHandling.Ignore)]
         public List<string> Currencies { get; set; }
     }
 
