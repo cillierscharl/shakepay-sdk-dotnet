@@ -21,6 +21,9 @@ var jwt = "";
 var httpClient = new HttpClient();
 var client = new ShakePayClient(jwt, httpClient);
 
+// Shake some sats!
+await client.ShakingSatsAsync();
+
 // Get all wallets associated with your account
 var wallets = await client.GetWalletsAsync();
 var cadWallet = wallets.Where(w => w.Currency == "CAD").Single();
@@ -31,4 +34,3 @@ var transactions1 = await client.GetTransactionHistory();
 // Get last 2000 transactions
 var transactions2 = await client.GetTransactionsHistoryPagedAsync(page: 1, limit: 2000);
 ```
-

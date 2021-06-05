@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace ShakePay.Contracts
 {
@@ -7,7 +8,13 @@ namespace ShakePay.Contracts
         [JsonProperty("pagination")]
         public TransactionHistoryPagination Pagination { get; set; }
         [JsonProperty("filterParams")]
-        public dynamic FilterParams { get; set; }
+        public TransactionHistoryFilterParams FilterParams { get; set; }
+    }
+
+    public class TransactionHistoryFilterParams
+    {
+        [JsonProperty("currencies")]
+        public List<string> Currencies { get; set; }
     }
 
     public class TransactionHistoryPagination

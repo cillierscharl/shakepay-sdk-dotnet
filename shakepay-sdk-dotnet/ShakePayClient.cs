@@ -20,6 +20,21 @@ namespace ShakePay
             SetDefaultRequestHeaders(config);
         }
 
+        public async Task<List<QuoteResponse>> GetCryptoCurrencyQuotes(bool includeFees = true)
+        {
+            if (!_initialized) {
+                throw new Exception("ShakePay client not initialized");
+            }
+
+            var quotesHttpResponse = await _httpClient.GetAsync($"{_baseUrl}/quote?includeFees={includeFees}");
+            if (quotesHttpResponse.IsSuccessStatusCode) {
+                var quotesResponse = JsonConvert.DeserializeObject<List<QuoteResponse>>(await quotesHttpResponse.Content.ReadAsStringAsync());
+                return quotesResponse;
+            }
+
+            return null;
+        }
+
         public async Task<List<Wallet>> GetWalletsAsync()
         {
             if (!_initialized) {
@@ -81,7 +96,7 @@ namespace ShakePay
             return null;
         }
 
-        public async Task<List<Transaction>> GetTransactionsHistoryPagedAsync(int page = 0, int limit = 2000)
+        public async Task<List<Transaction>> GetTransactionsHistoryPagedAsync(int page = 0, int limit = 2000, List<string> currencies = default)
         {
             if (!_initialized) {
                 throw new Exception("ShakePay client not initialized");
@@ -95,7 +110,10 @@ namespace ShakePay
                     Page = page.ToString(),
                     RowsPerPage = limit
                 },
-                FilterParams = new object()
+                FilterParams = new TransactionHistoryFilterParams()
+                {
+                    Currencies = currencies
+                }
             };
 
             var transactionsHistoryHttpResponse = await _httpClient.PostAsync(
