@@ -2,7 +2,6 @@
 using ShakePay.Contracts;
 using System;
 using System.Collections.Generic;
-using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -14,27 +13,21 @@ namespace ShakePay
         private readonly bool _initialized;
         private readonly HttpClient _httpClient;
         private static readonly string _baseUrl = "https://api.shakepay.com";
-        private string _jwt;
-        public ShakePayClient(string jwt, HttpClient httpClient)
+        public ShakePayClient(ShakePayClientConfiguration config, HttpClient httpClient)
         {
             _httpClient = httpClient;
-            _httpClient.DefaultRequestHeaders.Add("Authorization", jwt);
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", "shakepay-sdk-dotnet/1.0.0");
             _initialized = true;
-            _jwt = jwt;
-            PeriodicallyRefreshToken();
+            SetDefaultRequestHeaders(config);
         }
 
         public async Task<List<Wallet>> GetWalletsAsync()
         {
-            if (!_initialized)
-            {
+            if (!_initialized) {
                 throw new Exception("ShakePay client not initialized");
             }
 
             var walletsHttpResponse = await _httpClient.GetAsync($"{_baseUrl}/wallets");
-            if (walletsHttpResponse.IsSuccessStatusCode)
-            {
+            if (walletsHttpResponse.IsSuccessStatusCode) {
                 var walletsResponse = JsonConvert.DeserializeObject<WalletsResponse>(await walletsHttpResponse.Content.ReadAsStringAsync());
                 return walletsResponse.Wallets;
             }
@@ -42,10 +35,55 @@ namespace ShakePay
             return null;
         }
 
-        public async Task<List<Transaction>> GetTransactionsHistoryPagedAsync(int page = 0, int limit = 20)
+        public async Task<List<RecentContact>> GetRecentContactsAsync()
         {
-            if (!_initialized)
-            {
+            if (!_initialized) {
+                throw new Exception("ShakePay client not initialized");
+            }
+
+            var recentContactsHttpResponse = await _httpClient.GetAsync($"{_baseUrl}/recent-contacts");
+            if (recentContactsHttpResponse.IsSuccessStatusCode) {
+                var recentContactsResponse = JsonConvert.DeserializeObject<List<RecentContact>>(await recentContactsHttpResponse.Content.ReadAsStringAsync());
+                return recentContactsResponse;
+            }
+
+            return null;
+        }
+
+        public async Task<UserSearchResponse> GetUsersByNameAsync(string username)
+        {
+            if (!_initialized) {
+                throw new Exception("ShakePay client not initialized");
+            }
+
+            var userSearchHttpResponse = await _httpClient.GetAsync($"{_baseUrl}/users?username={username}");
+
+            if (userSearchHttpResponse.IsSuccessStatusCode) {
+                var response = await userSearchHttpResponse.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<UserSearchResponse>(response);
+            }
+
+            return null;
+        }
+
+        public async Task<ShakingSatsResponse> ShakingSatsAsync()
+        {
+            if (!_initialized) {
+                throw new Exception("ShakePay client not initialized");
+            }
+
+            var shakingSatsHttpsResponse = await _httpClient.GetAsync($"{_baseUrl}/shaking-sats");
+            if (shakingSatsHttpsResponse.IsSuccessStatusCode) {
+                var shakingSatsResponse = JsonConvert.DeserializeObject<ShakingSatsResponse>(await shakingSatsHttpsResponse.Content.ReadAsStringAsync());
+                return shakingSatsResponse;
+            }
+
+            return null;
+        }
+
+        public async Task<List<Transaction>> GetTransactionsHistoryPagedAsync(int page = 0, int limit = 2000)
+        {
+            if (!_initialized) {
                 throw new Exception("ShakePay client not initialized");
             }
 
@@ -66,8 +104,7 @@ namespace ShakePay
                 Encoding.UTF8,
                 "application/json"));
 
-            if (transactionsHistoryHttpResponse.IsSuccessStatusCode)
-            {
+            if (transactionsHistoryHttpResponse.IsSuccessStatusCode) {
                 var trasnactionHistoryResponseString = await transactionsHistoryHttpResponse.Content.ReadAsStringAsync();
                 var transactionHistoryResponse = JsonConvert.DeserializeObject<PagedTransactionHistoryResponse>(trasnactionHistoryResponseString);
                 return transactionHistoryResponse.Transactions;
@@ -76,18 +113,16 @@ namespace ShakePay
             return null;
         }
 
-        public async Task<List<Transaction>> GetTransactionHistory(string currency = "CAD", int limit = 10)
+        public async Task<List<Transaction>> GetTransactionHistoryAsync(string currency = "CAD", int limit = 10)
         {
-            if (!_initialized)
-            {
+            if (!_initialized) {
                 throw new Exception("ShakePay client not initialized");
             }
 
             var beforeDateTime = DateTime.UtcNow.ToString("O");
             var transactionsHistoryResponse = await _httpClient.GetAsync($"{_baseUrl}/transactions/history?currency={currency}&before={beforeDateTime}&limit={limit}");
 
-            if (transactionsHistoryResponse.IsSuccessStatusCode)
-            {
+            if (transactionsHistoryResponse.IsSuccessStatusCode) {
                 var response = await transactionsHistoryResponse.Content.ReadAsStringAsync();
                 return JsonConvert.DeserializeObject<List<Transaction>>(response);
             }
@@ -115,38 +150,31 @@ namespace ShakePay
             return postTransactionResponse.IsSuccessStatusCode;
         }
 
-        private void PeriodicallyRefreshToken()
+        private void SetDefaultRequestHeaders(ShakePayClientConfiguration config)
         {
-            var t = new Task(async () =>
-            {
-                while (true)
-                {
-                    await Task.Delay((int)TimeSpan.FromMinutes(5).TotalMilliseconds);
-                    await RenewTokenAsync();
-                }
-            });
-
-            t.Start();
-        }
-
-        private async Task RenewTokenAsync()
-        {
-            var newTokenHttpResponse = await _httpClient.PostAsync($"{_baseUrl}/authentication", new StringContent(JsonConvert.SerializeObject(new RenewAuthenticationTokenRequest()
-            {
-                Strategy = "jwt",
-                AccessToken = _jwt
-            })));
-
-            if (newTokenHttpResponse.IsSuccessStatusCode)
-            {
-                var newTokenString = await newTokenHttpResponse.Content.ReadAsStringAsync();
-                var newTokenResponse = JsonConvert.DeserializeObject<RenewAuthenticationTokenResponse>(newTokenString);
-
-                _jwt = newTokenResponse.AccessToken;
-                _httpClient.DefaultRequestHeaders.Clear();
-                _httpClient.DefaultRequestHeaders.Add("Authorization", _jwt);
-                _httpClient.DefaultRequestHeaders.Add("User-Agent", "shakepay-sdk-dotnet/1.0.0");
-            }
+            _httpClient.DefaultRequestHeaders.Clear();
+            _httpClient.DefaultRequestHeaders.Add("Authorization", config.Jwt);
+            _httpClient.DefaultRequestHeaders.Add("x-device-total-memory", "6023036928");
+            _httpClient.DefaultRequestHeaders.Add("x-device-name", config.DeviceName);
+            _httpClient.DefaultRequestHeaders.Add("x-device-has-notch", "false");
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", "Shakepay App v1.6.101 (16101) on Apple iPhone (iOS 14.5.1)");
+            _httpClient.DefaultRequestHeaders.Add("x-device-locale", "en - CA");
+            _httpClient.DefaultRequestHeaders.Add("x-device-manufacturer", "Apple");
+            _httpClient.DefaultRequestHeaders.Add("x-device-is-tablet", "false");
+            _httpClient.DefaultRequestHeaders.Add("x-device-total-disk-capacity", "127881465856");
+            _httpClient.DefaultRequestHeaders.Add("x-device-system-name", "iOS");
+            _httpClient.DefaultRequestHeaders.Add("x-device-carrier", "Bell");
+            _httpClient.DefaultRequestHeaders.Add("x-device-id", "iPhone13,3");
+            _httpClient.DefaultRequestHeaders.Add("x-device-model", "iPhone");
+            _httpClient.DefaultRequestHeaders.Add("x-device-serial-number", "");
+            _httpClient.DefaultRequestHeaders.Add("x-device-country", "CA");
+            _httpClient.DefaultRequestHeaders.Add("x-device-mac-address", "02:00:00:00:00:00");
+            _httpClient.DefaultRequestHeaders.Add("x-device-tzoffset", "240");
+            _httpClient.DefaultRequestHeaders.Add("x-device-ip-address", config.PrivateIpAddress);
+            _httpClient.DefaultRequestHeaders.Add("x-device-unique-id", config.DeviceUniqueId);
+            _httpClient.DefaultRequestHeaders.Add("x-notification-token", "");
+            _httpClient.DefaultRequestHeaders.Add("x-device-brand", "Apple");
+            _httpClient.DefaultRequestHeaders.Add("x-device-system-version", "14.5.1");
         }
     }
 }

@@ -6,9 +6,10 @@ namespace ShakePay
 {
     public interface IShakePayClient
     {
+        Task<List<RecentContact>> GetRecentContactsAsync();
+        Task<ShakingSatsResponse> ShakingSatsAsync();
         Task<List<Wallet>> GetWalletsAsync();
-        Task<List<Transaction>> GetTransactionHistory(string currency, int limit);
-
+        Task<List<Transaction>> GetTransactionHistoryAsync(string currency, int limit);
         Task<List<Transaction>> GetTransactionsHistoryPagedAsync(int page, int limit);
         Task<bool> PostTransactionAsync(string walletId, string username, decimal amount, string note);
     }
