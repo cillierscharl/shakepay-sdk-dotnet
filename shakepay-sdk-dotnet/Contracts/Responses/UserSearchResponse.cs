@@ -6,10 +6,10 @@ namespace ShakePay.Contracts
     public class UserSearchResponse
     {
         [JsonProperty("data")]
-        public IList<Data> Users { get; set; }
+        public IList<UserSearchObject> Users { get; set; }
     }
 
-    public class Data
+    public class UserSearchObject
     {
         [JsonProperty("username")]
         public string Username { get; set; }

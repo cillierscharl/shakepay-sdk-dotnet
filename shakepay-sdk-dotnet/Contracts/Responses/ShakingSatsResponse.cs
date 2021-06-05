@@ -13,13 +13,13 @@ namespace ShakePay.Contracts
         [JsonProperty("className")]
         public string ClassName { get; set; }
         [JsonProperty("data")]
-        public Data Data { get; set; }
+        public ShakeSatsResponseMetadata Data { get; set; }
         // Unknown
         [JsonProperty("errors")]
         public dynamic Errors { get; set; }
     }
 
-    public class Data
+    public class ShakeSatsResponseMetadata
     {
         [JsonProperty("code")]
         public string Code { get; set; }
