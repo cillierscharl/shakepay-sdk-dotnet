@@ -8,7 +8,7 @@ Unofficial ShakePay .NET SDK
 #### Installation ####
 
 ```shell
-Install-Package shakepay-sdk-dotnet -Version 1.0.1
+Install-Package shakepay-sdk-dotnet -Version 1.0.3
 ```
 
 
