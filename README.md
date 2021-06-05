@@ -23,7 +23,8 @@ var shakePayConfiguration = new ShakePayClientConfiguration()
     DeviceName = "",
     DeviceUniqueId = "",
     Jwt = "",
-    PrivateIpAddress = ""
+    PrivateIpAddress = "",
+    AutoRefreshToken = true
 };
 var client = new ShakePayClient(shakePayConfiguration, httpClient);
 
