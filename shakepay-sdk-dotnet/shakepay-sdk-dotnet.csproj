@@ -3,10 +3,31 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <RootNamespace>shakepay_sdk_dotnet</RootNamespace>
+    <Version>1.0.1</Version>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Authors>Charl Cilliers</Authors>
+    <PackageProjectUrl>https://github.com/cillierscharl/shakepay-sdk-dotnet</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/cillierscharl/shakepay-sdk-dotnet</RepositoryUrl>
+    <PackageIcon>shakepay-512.png</PackageIcon>
+    <PackageTags>shakepay</PackageTags>
+    <Copyright></Copyright>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <Title>shakepay_sdk_dotnet</Title>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+    <None Include="Assets\shakepay-512.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>
