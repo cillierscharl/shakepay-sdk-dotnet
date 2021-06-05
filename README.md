@@ -26,7 +26,7 @@ var wallets = await client.GetWalletsAsync();
 var cadWallet = wallets.Where(w => w.Currency == "CAD").Single();
 
 // Get last 200 transactions from a specific wallet (Defaults to CAD)
-var transactions1 = await client.GetTransactionHistory();
+var transactions1 = await client.GetTransactionHistoryAsync();
 
 // Get last 2000 transactions
 var transactions2 = await client.GetTransactionsHistoryPagedAsync(page: 1, limit: 2000);
