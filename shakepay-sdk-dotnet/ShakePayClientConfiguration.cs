@@ -10,5 +10,6 @@ namespace ShakePay
         public string PrivateIpAddress { get; set; }
         public string DeviceUniqueId { get; set; }
         public string Jwt { get; set; }
+        public bool AutoRefreshToken { get; set; }
     }
 }

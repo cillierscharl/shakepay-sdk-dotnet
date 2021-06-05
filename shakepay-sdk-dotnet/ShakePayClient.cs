@@ -18,6 +18,7 @@ namespace ShakePay
             _httpClient = httpClient;
             _initialized = true;
             SetDefaultRequestHeaders(config);
+            PeriodicallyRefreshToken(config);
         }
 
         public async Task<List<QuoteResponse>> GetCryptoCurrencyQuotes(bool includeFees = true)
@@ -193,6 +194,40 @@ namespace ShakePay
             _httpClient.DefaultRequestHeaders.Add("x-notification-token", "");
             _httpClient.DefaultRequestHeaders.Add("x-device-brand", "Apple");
             _httpClient.DefaultRequestHeaders.Add("x-device-system-version", "14.5.1");
+        }
+
+        private void PeriodicallyRefreshToken(ShakePayClientConfiguration config)
+        {
+            if (!config.AutoRefreshToken) {
+                return;
+            }
+
+            var t = new Task(async () =>
+            {
+                while (true) {
+                    await Task.Delay((int)TimeSpan.FromMinutes(1).TotalMilliseconds);
+                    await RenewTokenAsync();
+                }
+            });
+
+            t.Start();
+        }
+
+        private async Task RenewTokenAsync()
+        {
+            var newTokenHttpResponse = await _httpClient.PostAsync($"{_baseUrl}/authentication", new StringContent(JsonConvert.SerializeObject(new RenewAuthenticationTokenRequest()
+            {
+                Strategy = "jwt",
+                AccessToken = _httpClient.DefaultRequestHeaders.Authorization.Scheme
+            })));
+
+            if (newTokenHttpResponse.IsSuccessStatusCode) {
+                var newTokenString = await newTokenHttpResponse.Content.ReadAsStringAsync();
+                var newTokenResponse = JsonConvert.DeserializeObject<RenewAuthenticationTokenResponse>(newTokenString);
+
+                _httpClient.DefaultRequestHeaders.Remove("Authorization");
+                _httpClient.DefaultRequestHeaders.Add("Authorization", newTokenResponse.AccessToken);
+            }
         }
     }
 }
