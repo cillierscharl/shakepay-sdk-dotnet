@@ -38,5 +38,5 @@ var cadWallet = wallets.Where(w => w.Currency == "CAD").Single();
 var transactions1 = await client.GetTransactionHistoryAsync();
 
 // Get last 2000 transactions
-var transactions2 = await client.GetTransactionsHistoryPagedAsync(page: 1, limit: 2000);
+var transactions2 = await client.GetTransactionsHistoryPagedAsync(page: 1, limit: 2000, currencies: default);
 ```
