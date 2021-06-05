@@ -31,8 +31,8 @@ var client = new ShakePayClient(shakePayConfiguration, httpClient);
 // Shake some sats!
 await client.ShakingSatsAsync();
 
-// Get the current ShakePay crypto currency prices
-var prices = await client.GetCryptoCurrencyQuotes();
+// Get the current ShakePay cryptocurrency prices (includes fees by default)
+var prices = await client.GetCryptoCurrencyQuotes(includeFees: true);
 
 // Get all wallets associated with your account
 var wallets = await client.GetWalletsAsync();
