@@ -88,13 +88,19 @@ namespace ShakePay
                 throw new Exception("ShakePay client not initialized");
             }
 
-            var shakingSatsHttpsResponse = await _httpClient.GetAsync($"{_baseUrl}/shaking-sats");
-            if (shakingSatsHttpsResponse.IsSuccessStatusCode) {
-                var shakingSatsResponse = JsonConvert.DeserializeObject<ShakingSatsResponse>(await shakingSatsHttpsResponse.Content.ReadAsStringAsync());
-                return shakingSatsResponse;
-            }
+            try {
+                var shakingSatsHttpsResponse = await _httpClient.PostAsync($"{_baseUrl}/shaking-sats",
+                    new StringContent("{}",
+                    Encoding.UTF8,
+                    "application/json"));
 
-            return null;
+                var shakingSatsResponse = JsonConvert.DeserializeObject<ShakingSatsResponse>(await shakingSatsHttpsResponse.Content.ReadAsStringAsync());
+
+                return shakingSatsResponse;
+
+            } catch (Exception) {
+                return null;
+            }
         }
 
         public async Task<List<Transaction>> GetTransactionsHistoryPagedAsync(int page = 0, int limit = 2000, List<string> currencies = default)
@@ -205,7 +211,7 @@ namespace ShakePay
             var t = new Task(async () =>
             {
                 while (true) {
-                    await Task.Delay((int)TimeSpan.FromMinutes(1).TotalMilliseconds);
+                    await Task.Delay((int)TimeSpan.FromMinutes(5).TotalMilliseconds);
                     await RenewTokenAsync();
                 }
             });
