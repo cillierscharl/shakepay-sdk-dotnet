@@ -54,7 +54,7 @@ var transactionsList = new List<Transaction>();
 
 while (keepSearching) {
     var transactions = await client.GetTransactionsHistoryPagedAsync(page, 2000);
-    if (transactions.Count != 0) {
+    if (transactions.Any()) {
         transactionsList.AddRange(transactions);
     } else {
         keepSearching = false;
