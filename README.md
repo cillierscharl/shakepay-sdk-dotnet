@@ -8,11 +8,11 @@ Unofficial ShakePay .NET SDK
 #### Installation ####
 
 ```shell
-Install-Package shakepay-sdk-dotnet -Version 1.0.1
+Install-Package shakepay-sdk-dotnet -Version 1.0.3
 ```
 
 
-#### QuickStart ####
+#### Quick start ####
 
 ```csharp
 // JWT will automatically be refreshed every 5 minutes
@@ -23,12 +23,16 @@ var shakePayConfiguration = new ShakePayClientConfiguration()
     DeviceName = "",
     DeviceUniqueId = "",
     Jwt = "",
-    PrivateIpAddress = ""
+    PrivateIpAddress = "",
+    AutoRefreshToken = true
 };
 var client = new ShakePayClient(shakePayConfiguration, httpClient);
 
 // Shake some sats!
 await client.ShakingSatsAsync();
+
+// Get the current ShakePay cryptocurrency prices (includes fees by default)
+var prices = await client.GetCryptoCurrencyQuotes(includeFees: true);
 
 // Get all wallets associated with your account
 var wallets = await client.GetWalletsAsync();
@@ -39,4 +43,21 @@ var transactions1 = await client.GetTransactionHistoryAsync();
 
 // Get last 2000 transactions
 var transactions2 = await client.GetTransactionsHistoryPagedAsync(page: 1, limit: 2000, currencies: default);
+```
+
+#### Loading your entire transaction history ####
+```csharp
+var keepSearching = true;
+var page = 1;
+var transactionsList = new List<Transaction>();
+
+while (keepSearching) {
+    var transactions = await client.GetTransactionsHistoryPagedAsync(page, 2000);
+    if (transactions.Count != 0) {
+        transactionsList.AddRange(transactions);
+    } else {
+        keepSearching = false;
+    }
+    page++;
+}
 ```
