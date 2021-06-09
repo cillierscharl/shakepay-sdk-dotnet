@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <RootNamespace>shakepay_sdk_dotnet</RootNamespace>
-    <Version>1.0.3</Version>
+    <Version>1.0.4</Version>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors>Charl Cilliers</Authors>
     <PackageProjectUrl>https://github.com/cillierscharl/shakepay-sdk-dotnet</PackageProjectUrl>
