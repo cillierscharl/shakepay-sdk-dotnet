@@ -8,7 +8,7 @@ Unofficial ShakePay .NET SDK
 #### Installation ####
 
 ```shell
-Install-Package shakepay-sdk-dotnet -Version 1.0.3
+Install-Package shakepay-sdk-dotnet
 ```
 
 
@@ -29,7 +29,8 @@ var shakePayConfiguration = new ShakePayClientConfiguration()
 var client = new ShakePayClient(shakePayConfiguration, httpClient);
 
 // Shake some sats!
-await client.ShakingSatsAsync();
+var response = await client.ShakingSatsAsync();
+Console.WriteLine($"Been shaking for {response.Data.Streak} days!");
 
 // Get the current ShakePay cryptocurrency prices (includes fees by default)
 var prices = await client.GetCryptoCurrencyQuotes(includeFees: true);
@@ -53,7 +54,7 @@ var transactionsList = new List<Transaction>();
 
 while (keepSearching) {
     var transactions = await client.GetTransactionsHistoryPagedAsync(page, 2000);
-    if (transactions.Count != 0) {
+    if (transactions.Any()) {
         transactionsList.AddRange(transactions);
     } else {
         keepSearching = false;
