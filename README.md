@@ -48,7 +48,11 @@ var transactions2 = await client.GetTransactionsHistoryPagedAsync(page: 1, limit
 
 #### Send a payment ####
 ```csharp
-var result = await client.PostTransactionAsync(walletId: cadWallet.Id, username: "@charlc", 5.00m, note: "🏓 Pong!");
+var result = await client.PostTransactionAsync(
+    walletId: cadWallet.Id, 
+    username: "@charlc", 
+    amount: 5.00m, 
+    note: "🏓 Pong!");
 ```
 
 #### Loading your entire transaction history ####
