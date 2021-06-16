@@ -50,7 +50,7 @@ var transactions2 = await client.GetTransactionsHistoryPagedAsync(page: 1, limit
 ```csharp
 var result = await client.PostTransactionAsync(
     walletId: cadWallet.Id, 
-    username: "@charlc", 
+    username: "charlc", 
     amount: 5.00m, 
     note: "🏓 Pong!");
 ```
