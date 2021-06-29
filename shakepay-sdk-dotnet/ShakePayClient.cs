@@ -155,6 +155,22 @@ namespace ShakePay
             return null;
         }
 
+        public async Task<WaitlistResponse> GetWaitListPositionAsync()
+        {
+            if (!_initialized) {
+                throw new Exception("ShakePay client not initialized");
+            }
+
+            var waitListPositionHttpResponse = await _httpClient.GetAsync($"{_baseUrl}/card/waitlist");
+
+            if (waitListPositionHttpResponse.IsSuccessStatusCode) {
+                var response = await waitListPositionHttpResponse.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<WaitlistResponse>(response);
+            }
+
+            return null;
+        }
+
         public async Task<bool> PostTransactionAsync(string walletId, string username, decimal amount, string note)
         {
             var requestBody = new TransactionRequest()
