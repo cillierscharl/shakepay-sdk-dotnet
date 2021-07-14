@@ -32,6 +32,22 @@ namespace ShakePay.Contracts
         public To To { get; set; }
         [JsonProperty("from")]
         public From From { get; set; }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as Transaction);
+        }
+
+        public bool Equals(Transaction transaction)
+        {
+            return transaction != null &&
+                transaction.TransactionId == TransactionId;
+        }
+
+        public override int GetHashCode()
+        {
+            return TransactionId.GetHashCode();
+        }
     }
 
     public class To

@@ -103,6 +103,7 @@ namespace ShakePay
             }
         }
 
+        [Obsolete("@ti said you're a bad boy if you use this endpoint.")]
         public async Task<List<Transaction>> GetTransactionsHistoryPagedAsync(int page = 0, int limit = 2000, List<string> currencies = default)
         {
             if (!_initialized) {
@@ -138,14 +139,13 @@ namespace ShakePay
             return null;
         }
 
-        public async Task<List<Transaction>> GetTransactionHistoryAsync(string currency = "CAD", int limit = 10)
+        public async Task<List<Transaction>> GetTransactionHistoryAsync(DateTime beforeDateTime, string currency = "CAD", int limit = 2000)
         {
             if (!_initialized) {
                 throw new Exception("ShakePay client not initialized");
             }
 
-            var beforeDateTime = DateTime.UtcNow.ToString("O");
-            var transactionsHistoryResponse = await _httpClient.GetAsync($"{_baseUrl}/transactions/history?currency={currency}&before={beforeDateTime}&limit={limit}");
+            var transactionsHistoryResponse = await _httpClient.GetAsync($"{_baseUrl}/transactions/history?currency={currency}&before={beforeDateTime:O}&limit={limit}");
 
             if (transactionsHistoryResponse.IsSuccessStatusCode) {
                 var response = await transactionsHistoryResponse.Content.ReadAsStringAsync();
@@ -198,7 +198,7 @@ namespace ShakePay
             _httpClient.DefaultRequestHeaders.Add("x-device-total-memory", "6023036928");
             _httpClient.DefaultRequestHeaders.Add("x-device-name", config.DeviceName);
             _httpClient.DefaultRequestHeaders.Add("x-device-has-notch", "false");
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", "Shakepay App v1.6.101 (16101) on Apple iPhone (iOS 14.5.1)");
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", "Shakepay App v1.6.100 (16100) on charlc");
             _httpClient.DefaultRequestHeaders.Add("x-device-locale", "en - CA");
             _httpClient.DefaultRequestHeaders.Add("x-device-manufacturer", "Apple");
             _httpClient.DefaultRequestHeaders.Add("x-device-is-tablet", "false");
