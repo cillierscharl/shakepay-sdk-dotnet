@@ -10,7 +10,7 @@ namespace ShakePay.Contracts
         public List<Transaction> Transactions { get; set; }
     }
 
-    public class Transaction
+    public class Transaction : IEquatable<Transaction>
     {
         [JsonProperty("transactionId")]
         public string TransactionId { get; set; }
@@ -46,7 +46,7 @@ namespace ShakePay.Contracts
 
         public override int GetHashCode()
         {
-            return TransactionId.GetHashCode();
+            return TransactionId?.GetHashCode() ?? 0;
         }
     }
 

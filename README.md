@@ -15,8 +15,8 @@ Install-Package shakepay-sdk-dotnet
 #### Quick start ####
 
 ```csharp
-// JWT will automatically be refreshed every 5 minutes
-// Use an HTTP client factory. For demo purposes pass in a new client
+// Use an HTTP client factory. For demo purposes pass in a new client.
+// The HttpClient isn't modified, so it can be shared.
 var httpClient = new HttpClient();
 var shakePayConfiguration = new ShakePayClientConfiguration()
 {
@@ -24,50 +24,35 @@ var shakePayConfiguration = new ShakePayClientConfiguration()
     DeviceUniqueId = "",
     Jwt = "",
     PrivateIpAddress = "",
+    // Renew the JWT every 5 minutes until the client is disposed
     AutoRefreshToken = true
 };
-var client = new ShakePayClient(shakePayConfiguration, httpClient);
+using var client = new ShakePayClient(shakePayConfiguration, httpClient);
 
-// Shake some sats!
-var response = await client.ShakingSatsAsync();
-Console.WriteLine($"Been shaking for {response.Data.Streak} days!");
+// Shake some sats! If ShakePay rejects the shake (e.g. already shaken today), Data is null and Message says why.
+var shake = await client.ShakingSatsAsync();
+if (shake?.Data != null) {
+    Console.WriteLine($"Been shaking for {shake.Data.Streak} days!");
+}
 
 // Get the current ShakePay cryptocurrency prices (includes fees by default)
-var prices = await client.GetCryptoCurrencyQuotes(includeFees: true);
+var prices = await client.GetCryptoCurrencyQuotesAsync(includeFees: true);
 
 // Get all wallets associated with your account
 var wallets = await client.GetWalletsAsync();
-var cadWallet = wallets.Where(w => w.Currency == "CAD").Single();
+var cadWallet = wallets.Single(w => w.Currency == "CAD");
 
-// Get last 200 transactions from a specific wallet (Defaults to CAD)
-var transactions1 = await client.GetTransactionHistoryAsync();
-
-// Get last 2000 transactions
-var transactions2 = await client.GetTransactionsHistoryPagedAsync(page: 1, limit: 2000);
+// Get up to 2000 CAD transactions made before now
+var transactions = await client.GetTransactionHistoryAsync(DateTime.UtcNow, currency: "CAD", limit: 2000);
 ```
+
+Methods return `null` when ShakePay responds with an error, so check results before using them.
 
 #### Send a payment ####
 ```csharp
-var result = await client.PostTransactionAsync(
-    walletId: cadWallet.Id, 
-    username: "charlc", 
-    amount: 5.00m, 
+var sent = await client.PostTransactionAsync(
+    walletId: cadWallet.Id,
+    username: "charlc",
+    amount: 5.00m,
     note: "🏓 Pong!");
-```
-
-#### Loading your entire transaction history ####
-```csharp
-var keepSearching = true;
-var page = 1;
-var transactionsList = new List<Transaction>();
-
-while (keepSearching) {
-    var transactions = await client.GetTransactionsHistoryPagedAsync(page, 2000);
-    if (transactions.Any()) {
-        transactionsList.AddRange(transactions);
-    } else {
-        keepSearching = false;
-    }
-    page++;
-}
 ```
