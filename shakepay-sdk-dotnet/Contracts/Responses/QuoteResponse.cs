@@ -7,8 +7,8 @@ namespace ShakePay.Contracts
         [JsonProperty("symbol")]
         public string Symbol { get; set; }
         [JsonProperty("baseRate")]
-        public float BaseRate { get; set; }
+        public decimal BaseRate { get; set; }
         [JsonProperty("rate")]
-        public float Rate { get; set; }
+        public decimal Rate { get; set; }
     }
 }

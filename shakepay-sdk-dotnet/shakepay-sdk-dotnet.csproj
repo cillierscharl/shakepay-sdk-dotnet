@@ -2,32 +2,35 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <RootNamespace>shakepay_sdk_dotnet</RootNamespace>
-    <Version>1.0.4</Version>
+    <RootNamespace>ShakePay</RootNamespace>
+    <Version>1.1.0</Version>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Contracts mirror ShakePay's JSON and aren't individually documented. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
     <Authors>Charl Cilliers</Authors>
+    <Title>shakepay_sdk_dotnet</Title>
+    <Description>Unofficial .NET SDK for the ShakePay API.</Description>
     <PackageProjectUrl>https://github.com/cillierscharl/shakepay-sdk-dotnet</PackageProjectUrl>
     <RepositoryUrl>https://github.com/cillierscharl/shakepay-sdk-dotnet</RepositoryUrl>
     <PackageIcon>shakepay-512.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>shakepay</PackageTags>
-    <Copyright></Copyright>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
-    <Title>shakepay_sdk_dotnet</Title>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\LICENSE">
-      <Pack>True</Pack>
-      <PackagePath></PackagePath>
-    </None>
-    <None Include="Assets\shakepay-512.png">
-      <Pack>True</Pack>
-      <PackagePath></PackagePath>
-    </None>
+    <InternalsVisibleTo Include="ShakePay.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\LICENSE" Pack="true" PackagePath="" />
+    <None Include="..\README.md" Pack="true" PackagePath="" />
+    <None Include="Assets\shakepay-512.png" Pack="true" PackagePath="" />
   </ItemGroup>
 
 </Project>

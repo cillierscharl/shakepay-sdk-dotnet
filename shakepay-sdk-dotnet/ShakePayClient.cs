@@ -2,120 +2,105 @@
 using ShakePay.Contracts;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace ShakePay
 {
-    public class ShakePayClient : IShakePayClient
+    /// <summary>
+    /// Unofficial client for the ShakePay API. Methods return <c>null</c> when ShakePay
+    /// responds with a non-success status code.
+    /// </summary>
+    /// <remarks>
+    /// Headers are set per request, so the <see cref="HttpClient"/> passed in is never modified
+    /// and can be shared. Dispose the client to stop the background token refresh.
+    /// </remarks>
+    public class ShakePayClient : IShakePayClient, IDisposable
     {
-        private readonly bool _initialized;
+        private const string BaseUrl = "https://api.shakepay.com";
+        private static readonly TimeSpan DefaultTokenRefreshInterval = TimeSpan.FromMinutes(5);
+
         private readonly HttpClient _httpClient;
-        private static readonly string _baseUrl = "https://api.shakepay.com";
+        private readonly KeyValuePair<string, string>[] _deviceHeaders;
+        private readonly CancellationTokenSource _disposed = new CancellationTokenSource();
+        private volatile string _jwt;
+
         public ShakePayClient(ShakePayClientConfiguration config, HttpClient httpClient)
+            : this(config, httpClient, DefaultTokenRefreshInterval)
         {
-            _httpClient = httpClient;
-            _initialized = true;
-            SetDefaultRequestHeaders(config);
-            PeriodicallyRefreshToken(config);
         }
 
-        public async Task<List<QuoteResponse>> GetCryptoCurrencyQuotes(bool includeFees = true)
+        internal ShakePayClient(ShakePayClientConfiguration config, HttpClient httpClient, TimeSpan tokenRefreshInterval)
         {
-            if (!_initialized) {
-                throw new Exception("ShakePay client not initialized");
+            if (config == null) {
+                throw new ArgumentNullException(nameof(config));
             }
 
-            var quotesHttpResponse = await _httpClient.GetAsync($"{_baseUrl}/quote?includeFees={includeFees}");
-            if (quotesHttpResponse.IsSuccessStatusCode) {
-                var quotesResponse = JsonConvert.DeserializeObject<List<QuoteResponse>>(await quotesHttpResponse.Content.ReadAsStringAsync());
-                return quotesResponse;
-            }
+            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+            _jwt = config.Jwt;
+            _deviceHeaders = BuildDeviceHeaders(config);
 
-            return null;
+            if (config.AutoRefreshToken) {
+                _ = RefreshTokenPeriodicallyAsync(tokenRefreshInterval, _disposed.Token);
+            }
+        }
+
+        public Task<List<QuoteResponse>> GetCryptoCurrencyQuotesAsync(bool includeFees = true)
+        {
+            return GetAsync<List<QuoteResponse>>($"/quote?includeFees={(includeFees ? "true" : "false")}");
+        }
+
+        [Obsolete("Use GetCryptoCurrencyQuotesAsync.")]
+        public Task<List<QuoteResponse>> GetCryptoCurrencyQuotes(bool includeFees = true)
+        {
+            return GetCryptoCurrencyQuotesAsync(includeFees);
         }
 
         public async Task<List<Wallet>> GetWalletsAsync()
         {
-            if (!_initialized) {
-                throw new Exception("ShakePay client not initialized");
-            }
-
-            var walletsHttpResponse = await _httpClient.GetAsync($"{_baseUrl}/wallets");
-            if (walletsHttpResponse.IsSuccessStatusCode) {
-                var walletsResponse = JsonConvert.DeserializeObject<WalletsResponse>(await walletsHttpResponse.Content.ReadAsStringAsync());
-                return walletsResponse.Wallets;
-            }
-
-            return null;
+            var response = await GetAsync<WalletsResponse>("/wallets").ConfigureAwait(false);
+            return response?.Wallets;
         }
 
-        public async Task<List<RecentContact>> GetRecentContactsAsync()
+        public Task<List<RecentContact>> GetRecentContactsAsync()
         {
-            if (!_initialized) {
-                throw new Exception("ShakePay client not initialized");
-            }
-
-            var recentContactsHttpResponse = await _httpClient.GetAsync($"{_baseUrl}/recent-contacts");
-            if (recentContactsHttpResponse.IsSuccessStatusCode) {
-                var recentContactsResponse = JsonConvert.DeserializeObject<List<RecentContact>>(await recentContactsHttpResponse.Content.ReadAsStringAsync());
-                return recentContactsResponse;
-            }
-
-            return null;
+            return GetAsync<List<RecentContact>>("/recent-contacts");
         }
 
-        public async Task<UserSearchResponse> GetUsersByNameAsync(string username)
+        public Task<UserSearchResponse> GetUsersByNameAsync(string username)
         {
-            if (!_initialized) {
-                throw new Exception("ShakePay client not initialized");
-            }
-
-            var userSearchHttpResponse = await _httpClient.GetAsync($"{_baseUrl}/users?username={username}");
-
-            if (userSearchHttpResponse.IsSuccessStatusCode) {
-                var response = await userSearchHttpResponse.Content.ReadAsStringAsync();
-                return JsonConvert.DeserializeObject<UserSearchResponse>(response);
-            }
-
-            return null;
+            return GetAsync<UserSearchResponse>($"/users?username={Escape(username)}");
         }
 
+        /// <summary>
+        /// Shakes sats. When ShakePay rejects the shake (for example, already shaken today) the
+        /// error body is returned with <see cref="ShakingSatsResponse.Message"/> set. Returns
+        /// <c>null</c> if the request fails or the response can't be read.
+        /// </summary>
         public async Task<ShakingSatsResponse> ShakingSatsAsync()
         {
-            if (!_initialized) {
-                throw new Exception("ShakePay client not initialized");
-            }
-
             try {
-                var shakingSatsHttpsResponse = await _httpClient.PostAsync($"{_baseUrl}/shaking-sats",
-                    new StringContent("{}",
-                    Encoding.UTF8,
-                    "application/json"));
-
-                var shakingSatsResponse = JsonConvert.DeserializeObject<ShakingSatsResponse>(await shakingSatsHttpsResponse.Content.ReadAsStringAsync());
-
-                return shakingSatsResponse;
-
+                using (var response = await SendAsync(HttpMethod.Post, "/shaking-sats", new { }).ConfigureAwait(false)) {
+                    var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    return JsonConvert.DeserializeObject<ShakingSatsResponse>(json);
+                }
             } catch (Exception) {
                 return null;
             }
         }
 
-        [Obsolete("@ti said you're a bad boy if you use this endpoint.")]
+        [Obsolete("ShakePay deprecated this endpoint. Use GetTransactionHistoryAsync.")]
         public async Task<List<Transaction>> GetTransactionsHistoryPagedAsync(int page = 0, int limit = 2000, List<string> currencies = default)
         {
-            if (!_initialized) {
-                throw new Exception("ShakePay client not initialized");
-            }
-
             var requestBody = new TransactionHistoryRequest()
             {
                 Pagination = new TransactionHistoryPagination()
                 {
                     Descending = true,
-                    Page = page.ToString(),
+                    Page = page.ToString(CultureInfo.InvariantCulture),
                     RowsPerPage = limit
                 },
                 FilterParams = new TransactionHistoryFilterParams()
@@ -124,132 +109,151 @@ namespace ShakePay
                 }
             };
 
-            var transactionsHistoryHttpResponse = await _httpClient.PostAsync(
-                $"{_baseUrl}/transactions/history",
-                new StringContent(JsonConvert.SerializeObject(requestBody),
-                Encoding.UTF8,
-                "application/json"));
-
-            if (transactionsHistoryHttpResponse.IsSuccessStatusCode) {
-                var trasnactionHistoryResponseString = await transactionsHistoryHttpResponse.Content.ReadAsStringAsync();
-                var transactionHistoryResponse = JsonConvert.DeserializeObject<PagedTransactionHistoryResponse>(trasnactionHistoryResponseString);
-                return transactionHistoryResponse.Transactions;
-            }
-
-            return null;
+            var response = await SendAndReadAsync<PagedTransactionHistoryResponse>(HttpMethod.Post, "/transactions/history", requestBody).ConfigureAwait(false);
+            return response?.Transactions;
         }
 
-        public async Task<List<Transaction>> GetTransactionHistoryAsync(DateTime beforeDateTime, string currency = "CAD", int limit = 2000)
+        /// <summary>Gets up to <paramref name="limit"/> transactions in <paramref name="currency"/> made before <paramref name="beforeDateTime"/>.</summary>
+        public Task<List<Transaction>> GetTransactionHistoryAsync(DateTime beforeDateTime, string currency = "CAD", int limit = 2000)
         {
-            if (!_initialized) {
-                throw new Exception("ShakePay client not initialized");
-            }
-
-            var transactionsHistoryResponse = await _httpClient.GetAsync($"{_baseUrl}/transactions/history?currency={currency}&before={beforeDateTime:O}&limit={limit}");
-
-            if (transactionsHistoryResponse.IsSuccessStatusCode) {
-                var response = await transactionsHistoryResponse.Content.ReadAsStringAsync();
-                return JsonConvert.DeserializeObject<List<Transaction>>(response);
-            }
-
-            return null;
+            var before = beforeDateTime.ToString("O", CultureInfo.InvariantCulture);
+            return GetAsync<List<Transaction>>(
+                $"/transactions/history?currency={Escape(currency)}&before={Escape(before)}&limit={limit.ToString(CultureInfo.InvariantCulture)}");
         }
 
-        public async Task<WaitlistResponse> GetWaitListPositionAsync()
+        public Task<WaitlistResponse> GetWaitListPositionAsync()
         {
-            if (!_initialized) {
-                throw new Exception("ShakePay client not initialized");
-            }
-
-            var waitListPositionHttpResponse = await _httpClient.GetAsync($"{_baseUrl}/card/waitlist");
-
-            if (waitListPositionHttpResponse.IsSuccessStatusCode) {
-                var response = await waitListPositionHttpResponse.Content.ReadAsStringAsync();
-                return JsonConvert.DeserializeObject<WaitlistResponse>(response);
-            }
-
-            return null;
+            return GetAsync<WaitlistResponse>("/card/waitlist");
         }
 
+        /// <summary>Sends <paramref name="amount"/> from <paramref name="walletId"/> to a ShakePay user. Returns whether ShakePay accepted it.</summary>
         public async Task<bool> PostTransactionAsync(string walletId, string username, decimal amount, string note)
         {
             var requestBody = new TransactionRequest()
             {
-                Amount = amount.ToString(),
+                Amount = amount.ToString(CultureInfo.InvariantCulture),
                 FromWallet = walletId,
                 Note = note,
                 To = username,
                 ToType = "user"
             };
 
-            var postTransactionResponse = await _httpClient.PostAsync(
-                $"{_baseUrl}/transactions",
-                new StringContent(JsonConvert.SerializeObject(requestBody),
-                Encoding.UTF8,
-                "application/json"));
-
-            return postTransactionResponse.IsSuccessStatusCode;
-        }
-
-        private void SetDefaultRequestHeaders(ShakePayClientConfiguration config)
-        {
-            _httpClient.DefaultRequestHeaders.Clear();
-            _httpClient.DefaultRequestHeaders.Add("Authorization", config.Jwt);
-            _httpClient.DefaultRequestHeaders.Add("x-device-total-memory", "6023036928");
-            _httpClient.DefaultRequestHeaders.Add("x-device-name", config.DeviceName);
-            _httpClient.DefaultRequestHeaders.Add("x-device-has-notch", "false");
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", "Shakepay App v1.6.100 (16100) on charlc");
-            _httpClient.DefaultRequestHeaders.Add("x-device-locale", "en - CA");
-            _httpClient.DefaultRequestHeaders.Add("x-device-manufacturer", "Apple");
-            _httpClient.DefaultRequestHeaders.Add("x-device-is-tablet", "false");
-            _httpClient.DefaultRequestHeaders.Add("x-device-total-disk-capacity", "127881465856");
-            _httpClient.DefaultRequestHeaders.Add("x-device-system-name", "iOS");
-            _httpClient.DefaultRequestHeaders.Add("x-device-carrier", "Bell");
-            _httpClient.DefaultRequestHeaders.Add("x-device-id", "iPhone13,3");
-            _httpClient.DefaultRequestHeaders.Add("x-device-model", "iPhone");
-            _httpClient.DefaultRequestHeaders.Add("x-device-serial-number", "");
-            _httpClient.DefaultRequestHeaders.Add("x-device-country", "CA");
-            _httpClient.DefaultRequestHeaders.Add("x-device-mac-address", "02:00:00:00:00:00");
-            _httpClient.DefaultRequestHeaders.Add("x-device-tzoffset", "240");
-            _httpClient.DefaultRequestHeaders.Add("x-device-ip-address", config.PrivateIpAddress);
-            _httpClient.DefaultRequestHeaders.Add("x-device-unique-id", config.DeviceUniqueId);
-            _httpClient.DefaultRequestHeaders.Add("x-notification-token", "");
-            _httpClient.DefaultRequestHeaders.Add("x-device-brand", "Apple");
-            _httpClient.DefaultRequestHeaders.Add("x-device-system-version", "14.5.1");
-        }
-
-        private void PeriodicallyRefreshToken(ShakePayClientConfiguration config)
-        {
-            if (!config.AutoRefreshToken) {
-                return;
+            using (var response = await SendAsync(HttpMethod.Post, "/transactions", requestBody).ConfigureAwait(false)) {
+                return response.IsSuccessStatusCode;
             }
-
-            var t = new Task(async () =>
-            {
-                while (true) {
-                    await Task.Delay((int)TimeSpan.FromMinutes(5).TotalMilliseconds);
-                    await RenewTokenAsync();
-                }
-            });
-
-            t.Start();
         }
 
-        private async Task RenewTokenAsync()
+        /// <summary>Stops the background token refresh. The <see cref="HttpClient"/> is not disposed.</summary>
+        public void Dispose()
         {
-            var newTokenHttpResponse = await _httpClient.PostAsync($"{_baseUrl}/authentication", new StringContent(JsonConvert.SerializeObject(new RenewAuthenticationTokenRequest()
+            _disposed.Cancel();
+        }
+
+        private Task<T> GetAsync<T>(string pathAndQuery) where T : class
+        {
+            return SendAndReadAsync<T>(HttpMethod.Get, pathAndQuery, null);
+        }
+
+        private async Task<T> SendAndReadAsync<T>(HttpMethod method, string pathAndQuery, object body) where T : class
+        {
+            using (var response = await SendAsync(method, pathAndQuery, body).ConfigureAwait(false)) {
+                if (!response.IsSuccessStatusCode) {
+                    return null;
+                }
+
+                var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                return JsonConvert.DeserializeObject<T>(json);
+            }
+        }
+
+        private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string pathAndQuery, object body, CancellationToken cancellationToken = default)
+        {
+            using (var request = new HttpRequestMessage(method, BaseUrl + pathAndQuery)) {
+                foreach (var header in _deviceHeaders) {
+                    request.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                }
+
+                request.Headers.TryAddWithoutValidation("Authorization", _jwt);
+
+                if (body != null) {
+                    request.Content = new StringContent(JsonConvert.SerializeObject(body), Encoding.UTF8, "application/json");
+                }
+
+                return await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        private async Task RefreshTokenPeriodicallyAsync(TimeSpan interval, CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested) {
+                try {
+                    await Task.Delay(interval, cancellationToken).ConfigureAwait(false);
+                    await RenewTokenAsync(cancellationToken).ConfigureAwait(false);
+                } catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+                    return;
+                } catch (Exception) {
+                    // Keep the current token and try again on the next interval.
+                }
+            }
+        }
+
+        private async Task RenewTokenAsync(CancellationToken cancellationToken)
+        {
+            var requestBody = new RenewAuthenticationTokenRequest()
             {
                 Strategy = "jwt",
-                AccessToken = _httpClient.DefaultRequestHeaders.Authorization.Scheme
-            })));
+                AccessToken = _jwt
+            };
 
-            if (newTokenHttpResponse.IsSuccessStatusCode) {
-                var newTokenString = await newTokenHttpResponse.Content.ReadAsStringAsync();
-                var newTokenResponse = JsonConvert.DeserializeObject<RenewAuthenticationTokenResponse>(newTokenString);
+            using (var response = await SendAsync(HttpMethod.Post, "/authentication", requestBody, cancellationToken).ConfigureAwait(false)) {
+                if (!response.IsSuccessStatusCode) {
+                    return;
+                }
 
-                _httpClient.DefaultRequestHeaders.Remove("Authorization");
-                _httpClient.DefaultRequestHeaders.Add("Authorization", newTokenResponse.AccessToken);
+                var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                var newToken = JsonConvert.DeserializeObject<RenewAuthenticationTokenResponse>(json)?.AccessToken;
+                if (!string.IsNullOrEmpty(newToken)) {
+                    _jwt = newToken;
+                }
             }
+        }
+
+        private static string Escape(string value)
+        {
+            return Uri.EscapeDataString(value ?? string.Empty);
+        }
+
+        private static KeyValuePair<string, string>[] BuildDeviceHeaders(ShakePayClientConfiguration config)
+        {
+            return new[]
+            {
+                Header("x-device-total-memory", "6023036928"),
+                Header("x-device-name", config.DeviceName),
+                Header("x-device-has-notch", "false"),
+                Header("User-Agent", $"Shakepay App v1.6.100 (16100) on {config.DeviceName}"),
+                Header("x-device-locale", "en - CA"),
+                Header("x-device-manufacturer", "Apple"),
+                Header("x-device-is-tablet", "false"),
+                Header("x-device-total-disk-capacity", "127881465856"),
+                Header("x-device-system-name", "iOS"),
+                Header("x-device-carrier", "Bell"),
+                Header("x-device-id", "iPhone13,3"),
+                Header("x-device-model", "iPhone"),
+                Header("x-device-serial-number", ""),
+                Header("x-device-country", "CA"),
+                Header("x-device-mac-address", "02:00:00:00:00:00"),
+                Header("x-device-tzoffset", "240"),
+                Header("x-device-ip-address", config.PrivateIpAddress),
+                Header("x-device-unique-id", config.DeviceUniqueId),
+                Header("x-notification-token", ""),
+                Header("x-device-brand", "Apple"),
+                Header("x-device-system-version", "14.5.1"),
+            };
+        }
+
+        private static KeyValuePair<string, string> Header(string name, string value)
+        {
+            return new KeyValuePair<string, string>(name, value ?? string.Empty);
         }
     }
 }
