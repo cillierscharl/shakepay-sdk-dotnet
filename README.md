@@ -5,6 +5,15 @@
 
 Unofficial ShakePay .NET SDK
 
+> [!WARNING]
+> **Archived. This SDK is no longer maintained.**
+>
+> It's an unofficial client for the private API behind the Shakepay app, written in 2021. Shakepay doesn't document or support that API and can change it at any time, so parts of this may already have stopped working. Use it at your own risk.
+>
+> The last release on NuGet is 1.0.4, from June 2021. The `main` branch also has a 1.1.0 with bug fixes from November 2026 ([#1](https://github.com/cillierscharl/shakepay-sdk-dotnet/pull/1)), including one where two clients sharing an `HttpClient` both sent the last client's token. That version was never published to NuGet.
+>
+> The code and the docs below are left as they were, for posterity.
+
 #### Installation ####
 
 ```shell
